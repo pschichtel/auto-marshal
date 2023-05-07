@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	util "github.com/pschichtel/auto-marshal/internal/app/auto-marshal"
+	"github.com/pschichtel/auto-marshal/internal/app/util"
 	"github.com/pschichtel/auto-marshal/pkg/api"
 	"go/types"
 	"golang.org/x/tools/go/packages"
