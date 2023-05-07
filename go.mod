@@ -2,7 +2,10 @@ module github.com/pschichtel/auto-marshal
 
 go 1.20
 
-require golang.org/x/tools v0.8.0
+require (
+	github.com/dave/jennifer v1.6.1
+	golang.org/x/tools v0.8.0
+)
 
 require (
 	golang.org/x/mod v0.10.0 // indirect
