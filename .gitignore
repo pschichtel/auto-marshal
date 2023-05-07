@@ -1,6 +1,7 @@
 /*
 !/cmd/
 !/pkg/
+!/internal/
 !/.gitignore
 !/go.mod
 !/Makefile

@@ -2,45 +2,25 @@ package main
 
 import (
 	"fmt"
+	util "github.com/pschichtel/auto-marshal/internal/app/auto-marshal"
 	"github.com/pschichtel/auto-marshal/pkg/api"
 	"go/types"
 	"golang.org/x/tools/go/packages"
 	"os"
 )
 
-type A interface {
-	Test()
-}
-
-type B struct {
-	S string
-}
-
-func (i B) Test() {
-
-}
-
-type C struct {
-	I int32
-}
-
-func (i C) Test() {
-
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s <symbol>\n", os.Args[0])
 		os.Exit(1)
 	}
-	packageName, envExists := os.LookupEnv("GOPACKAGE")
-	if !envExists {
-		_, _ = fmt.Fprintln(os.Stderr, "GOPACKAGE environment var was not set!")
-		os.Exit(1)
-	}
+	pwd := util.ResolvedPwd()
+	moduleRoot := util.FindModuleRoot(pwd)
+	packagePath := util.DetectPackagePath(pwd, moduleRoot)
+	println("Generating code for package: " + packagePath)
 	symbolName := os.Args[1]
 	config := packages.Config{Mode: packages.NeedTypes | packages.NeedDeps | packages.NeedImports}
-	packageList, err := packages.Load(&config, packageName)
+	packageList, err := packages.Load(&config, packagePath)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +33,7 @@ func main() {
 		for i, e := range p.Errors {
 			_, _ = fmt.Fprintf(os.Stderr, "%d. Error: %s\n", i+1, e.Error())
 		}
-		panic("Processing of package (" + packageName + ")" + p.PkgPath + " " + p.Name + " failed")
+		panic("Processing of package (" + packagePath + ")" + p.PkgPath + " " + p.Name + " failed")
 	}
 
 	scope := p.Types.Scope()
@@ -61,7 +41,7 @@ func main() {
 	sourceFile := p.Fset.File(obj.Pos())
 
 	if _, ok := obj.(*types.TypeName); !ok {
-		_, _ = fmt.Fprintf(os.Stderr, "Type '%s' not found in package '%s'!\n", symbolName, packageName)
+		_, _ = fmt.Fprintf(os.Stderr, "Type '%s' not found in package '%s'!\n", symbolName, packagePath)
 		os.Exit(1)
 		return
 	}
