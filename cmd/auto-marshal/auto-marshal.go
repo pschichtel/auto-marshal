@@ -24,13 +24,17 @@ func (a AContainer) Test2() {
 
 }
 
-type B string
+type B struct {
+	S string
+}
 
 func (i B) Test() {
 
 }
 
-type C string
+type C struct {
+	I int32
+}
 
 func (i C) Test() {
 
@@ -66,6 +70,7 @@ func main() {
 
 	scope := p.Types.Scope()
 	obj := scope.Lookup(symbolName)
+	sourceFile := p.Fset.File(obj.Pos())
 
 	if _, ok := obj.(*types.TypeName); !ok {
 		_, _ = fmt.Fprintf(os.Stderr, "Type '%s' not found in package '%s'!\n", symbolName, packageName)
@@ -86,7 +91,11 @@ func main() {
 		for _, impl := range implementations {
 			println("  - ", impl.Name())
 		}
-		println(api.GenerateInterfaceCode(kind, obj, implementations, "json"))
+
+		err = api.GenerateInterfaceCode(sourceFile.Name(), kind, obj, implementations, "json")
+		if err != nil {
+			panic(err)
+		}
 	default:
 		println("unknown kind", kind.String())
 	}
