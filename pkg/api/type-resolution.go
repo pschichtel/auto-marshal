@@ -10,6 +10,9 @@ func FindImplementations(target *types.Interface, p *packages.Package) []*types.
 	scope := p.Types.Scope()
 	for _, symbolName := range scope.Names() {
 		obj := scope.Lookup(symbolName)
+		if !obj.Exported() {
+			continue
+		}
 
 		// only named types can implement interfaces
 		typeName, isTypeName := obj.(*types.TypeName)

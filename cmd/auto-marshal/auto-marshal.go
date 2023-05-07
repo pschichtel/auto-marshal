@@ -12,18 +12,6 @@ type A interface {
 	Test()
 }
 
-type AContainer struct {
-	a *A
-}
-
-func (a AContainer) ContainedValue() *A {
-	return a.a
-}
-
-func (a AContainer) Test2() {
-
-}
-
 type B struct {
 	S string
 }
@@ -63,7 +51,7 @@ func main() {
 	p := packageList[0]
 	if len(p.Errors) > 0 {
 		for i, e := range p.Errors {
-			fmt.Fprintf(os.Stderr, "%d. Error: %s\n", i+1, e.Error())
+			_, _ = fmt.Fprintf(os.Stderr, "%d. Error: %s\n", i+1, e.Error())
 		}
 		panic("Processing of package (" + packageName + ")" + p.PkgPath + " " + p.Name + " failed")
 	}
