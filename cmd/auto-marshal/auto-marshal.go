@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/pschichtel/auto-marshal/internal/app/util"
 	"github.com/pschichtel/auto-marshal/pkg/api"
+	"github.com/pschichtel/auto-marshal/pkg/api/interfaces"
+	"github.com/pschichtel/auto-marshal/pkg/api/structs"
 	"go/types"
 	"golang.org/x/tools/go/packages"
 	"os"
@@ -38,7 +40,11 @@ func main() {
 
 	scope := p.Types.Scope()
 	obj := scope.Lookup(symbolName)
-	sourceFile := p.Fset.File(obj.Pos())
+	if obj == nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Type %s not found!\n", symbolName)
+		os.Exit(1)
+	}
+	sourceFile := p.Fset.File(obj.Pos()).Name()
 
 	if _, ok := obj.(*types.TypeName); !ok {
 		_, _ = fmt.Fprintf(os.Stderr, "Type '%s' not found in package '%s'!\n", symbolName, packagePath)
@@ -51,6 +57,10 @@ func main() {
 	switch kind := underlying.(type) {
 	case *types.Struct:
 		println("a struct!", kind.NumFields())
+		err = structs.GenerateCode(sourceFile, kind, &obj)
+		if err != nil {
+			panic(err)
+		}
 	case *types.Basic:
 		println("a primitive!", kind.Name())
 	case *types.Interface:
@@ -60,7 +70,7 @@ func main() {
 			println("  - ", impl.Name())
 		}
 
-		err = api.GenerateInterfaceCode(sourceFile.Name(), kind, obj, implementations, "json")
+		err = interfaces.GenerateCode(sourceFile, &obj, implementations, "json")
 		if err != nil {
 			panic(err)
 		}
