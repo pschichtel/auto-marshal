@@ -4,6 +4,7 @@
 !/internal/
 !/.gitignore
 !/go.mod
+!/go.sum
 !/Makefile
 !/.editorconfig
 *_generated.go
