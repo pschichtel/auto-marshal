@@ -28,3 +28,18 @@ func GenerateAuxErrorType(file *jen.File, obj *types.Object) string {
 
 	return typeName
 }
+
+const ValueVariableName = "value"
+const WriterVariableName = "writer"
+const FirstVariableName = "first"
+
+func EncoderFunctionNameForNamedType(typeName string) string {
+	return "JsonEncode" + typeName
+}
+
+func EncoderFunctionParams(structName string) []jen.Code {
+	return []jen.Code{
+		jen.Id(ValueVariableName).Op("*").Id(structName),
+		jen.Id(WriterVariableName).Op("*").Qual("github.com/mailru/easyjson/jwriter", "Writer"),
+	}
+}

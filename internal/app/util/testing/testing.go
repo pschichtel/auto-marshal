@@ -1,8 +1,10 @@
 package main
 
 import (
+	"github.com/mailru/easyjson/jwriter"
 	"github.com/pschichtel/auto-marshal/pkg/api/encoder"
 	"os"
+	"reflect"
 )
 
 type LinkedList struct {
@@ -30,19 +32,19 @@ func (name NameAttribute) AttributeMarkerFunction() {
 
 }
 
-func JsonEncodeLinkedListFields(value *LinkedList, writer *encoder.JsonWriter, first bool) error {
+func JsonEncodeLinkedListFields(value *LinkedList, writer *jwriter.Writer, first bool) error {
 	if !first {
-		writer.FieldSeparator()
+		writer.RawString(",")
 	}
 	writer.String("value")
-	writer.ValueSeparator()
+	writer.RawString(":")
 	err := JsonEncodeAttribute(value.Value, writer)
 	if err != nil {
 		return err
 	}
-	writer.FieldSeparator()
+	writer.RawString(",")
 	writer.String("next")
-	writer.ValueSeparator()
+	writer.RawString(":")
 	err = JsonEncodeLinkedList(value.Next, writer)
 	if err != nil {
 		return err
@@ -50,70 +52,70 @@ func JsonEncodeLinkedListFields(value *LinkedList, writer *encoder.JsonWriter, f
 	return nil
 }
 
-func JsonEncodeLinkedList(value *LinkedList, writer *encoder.JsonWriter) error {
+func JsonEncodeLinkedList(value *LinkedList, writer *jwriter.Writer) error {
 	if value == nil {
-		writer.NullValue()
+		writer.RawString("null")
 		return nil
 	}
 
-	writer.BeginObject()
+	writer.RawString("{")
 	err := JsonEncodeLinkedListFields(value, writer, true)
 	if err != nil {
 		return err
 	}
-	writer.EndObject()
+	writer.RawString("}")
 	return nil
 }
 
-func JsonEncodeNameAttributeFields(value *NameAttribute, writer *encoder.JsonWriter, first bool) {
+func JsonEncodeNameAttributeFields(value *NameAttribute, writer *jwriter.Writer, first bool) {
 	if !first {
-		writer.FieldSeparator()
+		writer.RawString(",")
 	}
 	writer.String("name")
-	writer.ValueSeparator()
+	writer.RawString(":")
 	writer.String(value.Name)
 }
 
-func JsonEncodeNameAttribute(value *NameAttribute, writer *encoder.JsonWriter) {
+func JsonEncodeNameAttribute(value *NameAttribute, writer *jwriter.Writer) {
 	if value == nil {
-		writer.NullValue()
+		writer.RawString("null")
 		return
 	}
 
-	writer.BeginObject()
+	writer.RawString("{")
 	JsonEncodeNameAttributeFields(value, writer, true)
-	writer.EndObject()
+	writer.RawString("}")
 }
 
-func JsonEncodeAmountAttributeFields(value *AmountAttribute, writer *encoder.JsonWriter, first bool) {
+func JsonEncodeAmountAttributeFields(value *AmountAttribute, writer *jwriter.Writer, first bool) {
 	if !first {
-		writer.FieldSeparator()
+		writer.RawString(",")
 	}
 	writer.String("amount")
-	writer.ValueSeparator()
+	writer.RawString(":")
 	writer.Int32(value.Amount)
 }
 
-func JsonEncodeAmountAttribute(value *AmountAttribute, writer *encoder.JsonWriter) {
+func JsonEncodeAmountAttribute(value *AmountAttribute, writer *jwriter.Writer) {
 	if value == nil {
-		writer.NullValue()
+		writer.RawString("null")
 		return
 	}
 
-	writer.BeginObject()
+	writer.RawString("{")
 	JsonEncodeAmountAttributeFields(value, writer, true)
-	writer.EndObject()
+	writer.RawString("}")
 }
 
-func JsonEncodeAttribute(value *Attribute, writer *encoder.JsonWriter) error {
+func JsonEncodeAttribute(value *Attribute, writer *jwriter.Writer) error {
 	if value == nil {
-		writer.NullValue()
+		writer.RawString("null")
 		return nil
 	}
 
-	writer.BeginObject()
+	writer.RawString("{")
 	writer.String("type")
-	writer.ValueSeparator()
+	writer.RawString(":")
 	switch kind := (*value).(type) {
 	case NameAttribute:
 		writer.String("NameAttribute")
@@ -122,9 +124,9 @@ func JsonEncodeAttribute(value *Attribute, writer *encoder.JsonWriter) error {
 		writer.String("AmountAttribute")
 		JsonEncodeAmountAttributeFields(&kind, writer, false)
 	default:
-		return encoder.JsonEncodingError("Unknown interface type!")
+		return encoder.JsonEncodingError("Unknown interface type: " + reflect.TypeOf(kind).Name())
 	}
-	writer.EndObject()
+	writer.RawString("}")
 
 	return nil
 }
