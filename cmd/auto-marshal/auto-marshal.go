@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/pschichtel/auto-marshal/internal/app/util"
 	"github.com/pschichtel/auto-marshal/pkg/api"
+	"github.com/pschichtel/auto-marshal/pkg/api/basics"
 	"github.com/pschichtel/auto-marshal/pkg/api/interfaces"
 	"github.com/pschichtel/auto-marshal/pkg/api/structs"
 	"go/types"
@@ -63,6 +64,17 @@ func main() {
 		}
 	case *types.Basic:
 		println("a primitive!", kind.Name())
+		err = basics.GenerateCode(sourceFile, &underlying, &obj, false)
+		if err != nil {
+			panic(err)
+		}
+	case *types.Pointer:
+		target := kind.Elem()
+		println("a pointer!")
+		err = basics.GenerateCode(sourceFile, &target, &obj, true)
+		if err != nil {
+			panic(err)
+		}
 	case *types.Interface:
 		implementations := api.FindImplementations(kind, p)
 		println("an interface!", obj.Name(), len(implementations))

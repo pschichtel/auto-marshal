@@ -5,8 +5,6 @@ import (
 	"github.com/fatih/structtag"
 	"github.com/pschichtel/auto-marshal/pkg/api"
 	"go/types"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"unicode"
 	"unicode/utf8"
 )
@@ -40,7 +38,7 @@ func generateFile(structType *types.Struct, structObject *types.Object) *File {
 
 	generateFieldsEncoderFunction(file, structType, structObject)
 	generateEncoderFunction(file, structObject)
-	generateMarshalFunction(file, structObject)
+	api.GenerateMarshalFunction(file, structObject)
 
 	return file
 }
@@ -112,7 +110,7 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 
 		basicType, isBasic := fieldType.(*types.Basic)
 		if isBasic {
-			basicWriterFunctionName := cases.Title(language.English, cases.Compact).String(basicType.Name())
+			basicWriterFunctionName := api.WriterFunctionForBasicType(basicType)
 			if fieldIsPointer {
 				stmt := If(Id(api.ValueVariableName).Dot(fieldName).Op("!=").Nil()).Block(
 					Id(api.WriterVariableName).Dot(basicWriterFunctionName).Call(Op("*").Id(api.ValueVariableName).Dot(fieldName)),
@@ -160,10 +158,7 @@ func generateEncoderFunction(file *File, structObject *types.Object) {
 	file.Func().Id(api.EncoderFunctionNameForNamedType(structName)).Params(
 		api.EncoderFunctionParams(structName)...,
 	).Params(Error()).Block(
-		If(Id(api.ValueVariableName).Op("==").Nil()).Block(
-			Id(api.WriterVariableName).Dot("RawString").Call(Lit("null")),
-			Return(Nil()),
-		),
+		api.ReturnNilIfValueIsNil(),
 		Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
 		Err().Op(":=").Id(StructFieldEncoderFunctionNameForNamedType(structName)).Call(Id(api.ValueVariableName), Id(api.WriterVariableName), True()),
 		If(Err().Op("!=").Nil()).Block(
@@ -171,14 +166,6 @@ func generateEncoderFunction(file *File, structObject *types.Object) {
 		),
 		Id(api.WriterVariableName).Dot("RawString").Call(Lit("}")),
 		Return(Nil()),
-	).Line()
-}
-
-func generateMarshalFunction(file *File, structObject *types.Object) {
-	receiverName := "subject"
-	structName := (*structObject).Name()
-	file.Func().Params(Id(receiverName).Op("*").Id(structName)).Id("MarshalJSON").Params().Params(Op("[]").Byte(), Error()).Block(
-		Return(Qual("github.com/pschichtel/auto-marshal/pkg/api/encoder", "EncodeJson").Call(Id(receiverName), Id(api.EncoderFunctionNameForNamedType(structName)))),
 	).Line()
 }
 

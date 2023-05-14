@@ -3,6 +3,8 @@ package api
 import (
 	"github.com/dave/jennifer/jen"
 	"go/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"path/filepath"
 )
 
@@ -15,18 +17,6 @@ func CreateJenFile(obj *types.Object) *jen.File {
 func DeriveOutputFileName(sourceFile string, obj *types.Object) string {
 	sourceFileExt := filepath.Ext(sourceFile)
 	return sourceFile[0:len(sourceFile)-len(sourceFileExt)] + "_" + (*obj).Name() + "_generated" + sourceFileExt
-}
-
-func GenerateAuxErrorType(file *jen.File, obj *types.Object) string {
-	typeName := "aux" + (*obj).Name() + "Error"
-	receiverName := "e"
-	file.Type().Id(typeName).String().Line()
-
-	file.Func().Params(jen.Id(receiverName).Id(typeName)).Id("Error").Params().Params(jen.String()).Block(
-		jen.Return(jen.String().Call(jen.Id(receiverName))),
-	).Line()
-
-	return typeName
 }
 
 const ValueVariableName = "value"
@@ -42,4 +32,23 @@ func EncoderFunctionParams(structName string) []jen.Code {
 		jen.Id(ValueVariableName).Op("*").Id(structName),
 		jen.Id(WriterVariableName).Op("*").Qual("github.com/mailru/easyjson/jwriter", "Writer"),
 	}
+}
+
+func GenerateMarshalFunction(file *jen.File, obj *types.Object) {
+	receiverName := "subject"
+	structName := (*obj).Name()
+	file.Func().Params(jen.Id(receiverName).Op("*").Id(structName)).Id("MarshalJSON").Params().Params(jen.Op("[]").Byte(), jen.Error()).Block(
+		jen.Return(jen.Qual("github.com/pschichtel/auto-marshal/pkg/api/encoder", "EncodeJson").Call(jen.Id(receiverName), jen.Id(EncoderFunctionNameForNamedType(structName)))),
+	).Line()
+}
+
+func WriterFunctionForBasicType(basicType *types.Basic) string {
+	return cases.Title(language.English, cases.Compact).String(basicType.Name())
+}
+
+func ReturnNilIfValueIsNil() jen.Code {
+	return jen.If(jen.Id(ValueVariableName).Op("==").Nil()).Block(
+		jen.Id(WriterVariableName).Dot("RawString").Call(jen.Lit("null")),
+		jen.Return(jen.Nil()),
+	)
 }
