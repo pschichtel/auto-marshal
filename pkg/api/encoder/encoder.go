@@ -28,3 +28,53 @@ func EncodeJson[T any](value *T, encoder JsonEncoder[T]) ([]byte, error) {
 	}
 	return out.Bytes(), nil
 }
+
+func JsonEncoderSlice[T any](childEncoder JsonEncoder[T]) func(value *[]T, writer *jwriter.Writer) error {
+	return func(value *[]T, writer *jwriter.Writer) error {
+		if value == nil {
+			writer.RawString("null")
+			return nil
+		}
+		writer.RawByte('[')
+		entryCounter := 0
+		for _, child := range *value {
+			if entryCounter > 0 {
+				writer.RawString(",")
+			}
+			entryCounter++
+			err := childEncoder(&child, writer)
+			if err != nil {
+				return err
+			}
+		}
+		writer.RawByte(']')
+
+		return nil
+	}
+}
+
+func JsonEncoderStringMap[T any](childEncoder JsonEncoder[T]) func(value *map[string]T, writer *jwriter.Writer) error {
+	return func(value *map[string]T, writer *jwriter.Writer) error {
+		if value == nil {
+			writer.RawString("null")
+			return nil
+		}
+		writer.RawByte('{')
+		entryCounter := 0
+		for key, child := range *value {
+			if entryCounter > 0 {
+				writer.RawString(",")
+			}
+			entryCounter++
+			writer.String(key)
+			writer.RawByte(':')
+			err := childEncoder(&child, writer)
+			if err != nil {
+				return err
+			}
+		}
+		writer.RawByte('}')
+
+		return nil
+	}
+}
