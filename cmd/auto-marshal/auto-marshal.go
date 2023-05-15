@@ -69,6 +69,7 @@ func main() {
 			panic(err)
 		}
 	case *types.Pointer:
+		// TODO the elem can itself be a pointer again, it should be recursively dereferenced
 		target := kind.Elem()
 		println("a pointer!")
 		err = basics.GenerateCode(sourceFile, &target, &obj, true)
