@@ -11,4 +11,7 @@ require (
 	golang.org/x/tools v0.8.0
 )
 
-require golang.org/x/sys v0.7.0 // indirect
+require (
+	github.com/josharian/intern v1.0.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+)
