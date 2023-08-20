@@ -126,6 +126,26 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 			continue
 		}
 
+		arrayType, isArray := fieldType.(*types.Array)
+		if isArray {
+			return encoder.JsonEncodingError("can't handle array types: " + arrayType.String())
+		}
+
+		sliceType, isSlice := fieldType.(*types.Slice)
+		if isSlice {
+			return encoder.JsonEncodingError("can't handle slice types: " + sliceType.String())
+		}
+
+		mapType, isMap := fieldType.(*types.Map)
+		if isMap {
+			keyType := mapType.Key()
+			basicKeyType, keyIsBasic := keyType.(*types.Basic)
+			if !keyIsBasic || basicKeyType.Kind() != types.String {
+				return encoder.JsonEncodingError("maps can only have strings as keys, but got: " + keyType.String())
+			}
+			return encoder.JsonEncodingError("can't handle map types: " + mapType.String())
+		}
+
 		basicType, isBasic := fieldType.(*types.Basic)
 		if isBasic {
 			basicWriterFunctionName := api.WriterFunctionForBasicType(basicType)
@@ -142,7 +162,7 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 			continue
 		}
 
-		return encoder.JsonEncodingError("can't handle this type!")
+		return encoder.JsonEncodingError("can't handle this type: " + fieldType.String())
 	}
 
 	body = append(body, Return(Nil()))
