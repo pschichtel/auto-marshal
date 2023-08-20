@@ -4,7 +4,10 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/fatih/structtag"
 	"github.com/pschichtel/auto-marshal/pkg/api"
+	"github.com/pschichtel/auto-marshal/pkg/api/encoder"
 	"go/types"
+	"slices"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -29,29 +32,36 @@ func GenerateCode(sourceFile string, structType *types.Struct, structObject *typ
 		return nil
 	}
 
-	file := generateFile(structType, structObject)
+	file, err := generateFile(structType, structObject)
+	if err != nil {
+		return err
+	}
 	return file.Save(api.DeriveOutputFileName(sourceFile, structObject))
 }
 
-func generateFile(structType *types.Struct, structObject *types.Object) *File {
+func generateFile(structType *types.Struct, structObject *types.Object) (*File, error) {
 	file := api.CreateJenFile(structObject)
 
-	generateFieldsEncoderFunction(file, structType, structObject)
+	err := generateFieldsEncoderFunction(file, structType, structObject)
+	if err != nil {
+		return nil, err
+	}
 	generateEncoderFunction(file, structObject)
 	api.GenerateMarshalFunction(file, structObject)
 
-	return file
+	return file, nil
 }
 
 func StructFieldEncoderFunctionNameForNamedType(typeName string) string {
 	return api.EncoderFunctionNameForNamedType(typeName) + "Fields"
 }
 
-func generateFieldsEncoderFunction(file *File, structType *types.Struct, structObject *types.Object) {
+func generateFieldsEncoderFunction(file *File, structType *types.Struct, structObject *types.Object) error {
 
 	var body []Code
 	emittedFields := 0
 	hasError := false
+	var usedFieldNames []string
 
 	for i := 0; i < structType.NumFields(); i++ {
 		field := structType.Field(i)
@@ -75,6 +85,10 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 		if jsonFieldNameFromTags != nil {
 			jsonFieldName = *jsonFieldNameFromTags
 		}
+		if slices.Contains(usedFieldNames, jsonFieldName) {
+			return encoder.JsonEncodingError("Field name '" + jsonFieldName + "' is not unique in struct!")
+		}
+		usedFieldNames = append(usedFieldNames, jsonFieldName)
 
 		body = append(body, Id(api.WriterVariableName).Dot("String").Call(Lit(jsonFieldName)))
 		body = append(body, Id(api.WriterVariableName).Dot("RawString").Call(Lit(":")))
@@ -103,7 +117,11 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 				hasError = true
 			}
 
-			body = append(body, Err().Op(errorAssignOp).Id(api.EncoderFunctionNameForNamedType(namedType.Obj().Name())).Call(valueParam, Id(api.WriterVariableName)))
+			generatorFunc := generatorRefFromTags(tags)
+			if generatorFunc == nil {
+				generatorFunc = Id(api.EncoderFunctionNameForNamedType(namedType.Obj().Name()))
+			}
+			body = append(body, appendStatement(Err().Op(errorAssignOp), generatorFunc).Call(valueParam, Id(api.WriterVariableName)))
 			body = append(body, If(Err().Op("!=").Nil()).Block(Return(Err())))
 			continue
 		}
@@ -124,7 +142,7 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 			continue
 		}
 
-		println("can't handle this type!")
+		return encoder.JsonEncodingError("can't handle this type!")
 	}
 
 	body = append(body, Return(Nil()))
@@ -139,6 +157,13 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 	file.Func().Id(StructFieldEncoderFunctionNameForNamedType(structName)).Params(
 		append(api.EncoderFunctionParams(structName), Id(api.FirstVariableName).Bool())...,
 	).Params(Id("error")).Block(body...).Line()
+
+	return nil
+}
+
+func appendStatement(statement *Statement, code Code) *Statement {
+	*statement = append(*statement, code)
+	return statement
 }
 
 func findJsonFieldName(tags *structtag.Tags) *string {
@@ -151,6 +176,23 @@ func findJsonFieldName(tags *structtag.Tags) *string {
 	}
 
 	return &tag.Name
+}
+
+func generatorRefFromTags(tags *structtag.Tags) Code {
+	if tags == nil {
+		return nil
+	}
+	tag, _ := tags.Get("generator")
+	if tag == nil {
+		return nil
+	}
+	name := tag.Name
+	if !strings.Contains(name, ".") {
+		return Id(name)
+	}
+	parts := strings.SplitN(name, ".", 2)
+
+	return Qual(parts[0], parts[1])
 }
 
 func generateEncoderFunction(file *File, structObject *types.Object) {
