@@ -35,17 +35,29 @@ func generateEncoderFunction(file *File, interfaceObject *types.Object, typeTag 
 	})
 	cases = append(cases, Default().Block(Return(Qual("github.com/pschichtel/auto-marshal/pkg/api/encoder", "JsonEncodingError").Call(Lit("Unknown type: ").Op("+").Qual("reflect", "TypeOf").Call(Id(actualName)).Dot("Name").Call()))))
 	interfaceName := (*interfaceObject).Name()
+	body := []Code{
+		api.ReturnNilIfValueIsNil(),
+	}
+	if len(implementations) > 0 {
+		body = append(body,
+			Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
+			Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
+			Id(api.WriterVariableName).Dot("String").Call(Lit(typeTag)),
+			Id(api.WriterVariableName).Dot("RawString").Call(Lit(":")),
+			Switch(Id(actualName).Op(":=").Parens(Op("*").Id(api.ValueVariableName)).Assert(Type())).Block(cases...),
+			Id(api.WriterVariableName).Dot("RawString").Call(Lit("}")),
+		)
+	} else {
+		body = append(body,
+			Id(api.WriterVariableName).Dot("RawString").Call(Lit("{}")),
+		)
+	}
+	body = append(body,
+		Return(Nil()),
+	)
 	file.Func().Id(api.EncoderFunctionNameForNamedType(interfaceName)).Params(
 		api.EncoderFunctionParams(interfaceName)...,
-	).Params(Error()).Block(
-		api.ReturnNilIfValueIsNil(),
-		Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
-		Id(api.WriterVariableName).Dot("String").Call(Lit(typeTag)),
-		Id(api.WriterVariableName).Dot("RawString").Call(Lit(":")),
-		Switch(Id(actualName).Op(":=").Parens(Op("*").Id(api.ValueVariableName)).Assert(Type())).Block(cases...),
-		Id(api.WriterVariableName).Dot("RawString").Call(Lit("}")),
-		Return(Nil()),
-	).Line()
+	).Params(Error()).Block(body...).Line()
 }
 
 func generateMarshalSwitchCase(implementation *types.TypeName, actualName string) []Code {
