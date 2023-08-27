@@ -41,7 +41,6 @@ func generateEncoderFunction(file *File, interfaceObject *types.Object, typeTag 
 	if len(implementations) > 0 {
 		body = append(body,
 			Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
-			Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
 			Id(api.WriterVariableName).Dot("String").Call(Lit(typeTag)),
 			Id(api.WriterVariableName).Dot("RawString").Call(Lit(":")),
 			Switch(Id(actualName).Op(":=").Parens(Op("*").Id(api.ValueVariableName)).Assert(Type())).Block(cases...),
