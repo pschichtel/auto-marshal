@@ -88,7 +88,7 @@ func generateEncoderFunctionForNamed(file *File, namedType *types.Named, object 
 	file.Func().Id(api.EncoderFunctionNameForNamedType(typeName)).Params(
 		api.EncoderFunctionParams(typeName)...,
 	).Params(Error()).Block(
-		GenerateNamedType(namedType, pointer),
+		Return(GenerateNamedType(namedType, pointer)),
 	).Line()
 }
 
