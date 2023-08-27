@@ -46,7 +46,7 @@ func WriterFunctionForBasicType(basicType *types.Basic) string {
 	return cases.Title(language.English, cases.Compact).String(basicType.Name())
 }
 
-func ReturnNilIfValueIsNil() jen.Code {
+func WriteNilAndReturnIfValueIsNil() jen.Code {
 	return jen.If(jen.Id(ValueVariableName).Op("==").Nil()).Block(
 		jen.Id(WriterVariableName).Dot("RawString").Call(jen.Lit("null")),
 		jen.Return(jen.Nil()),

@@ -36,7 +36,7 @@ func generateEncoderFunction(file *File, interfaceObject *types.Object, typeTag 
 	cases = append(cases, Default().Block(Return(Qual("github.com/pschichtel/auto-marshal/pkg/api/encoder", "JsonEncodingError").Call(Lit("Unknown type: ").Op("+").Qual("reflect", "TypeOf").Call(Id(actualName)).Dot("Name").Call()))))
 	interfaceName := (*interfaceObject).Name()
 	body := []Code{
-		api.ReturnNilIfValueIsNil(),
+		api.WriteNilAndReturnIfValueIsNil(),
 	}
 	if len(implementations) > 0 {
 		body = append(body,

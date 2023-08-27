@@ -67,7 +67,7 @@ func generateEncoderFunctionForBasic(file *File, basicType *types.Basic, object 
 	file.Func().Id(api.EncoderFunctionNameForNamedType(typeName)).Params(
 		api.EncoderFunctionParams(typeName)...,
 	).Params(Error()).Block(
-		api.ReturnNilIfValueIsNil(),
+		api.WriteNilAndReturnIfValueIsNil(),
 		GenerateBasicType(basicType, pointer),
 		Return(Nil()),
 	).Line()
@@ -88,6 +88,7 @@ func generateEncoderFunctionForNamed(file *File, namedType *types.Named, object 
 	file.Func().Id(api.EncoderFunctionNameForNamedType(typeName)).Params(
 		api.EncoderFunctionParams(typeName)...,
 	).Params(Error()).Block(
+		api.WriteNilAndReturnIfValueIsNil(),
 		Return(GenerateNamedType(namedType, pointer)),
 	).Line()
 }

@@ -201,7 +201,7 @@ func generateEncoderFunction(file *File, structObject *types.Object) {
 	file.Func().Id(api.EncoderFunctionNameForNamedType(structName)).Params(
 		api.EncoderFunctionParams(structName)...,
 	).Params(Error()).Block(
-		api.ReturnNilIfValueIsNil(),
+		api.WriteNilAndReturnIfValueIsNil(),
 		Id(api.WriterVariableName).Dot("RawString").Call(Lit("{")),
 		Err().Op(":=").Id(StructFieldEncoderFunctionNameForNamedType(structName)).Call(Id(api.ValueVariableName), Id(api.WriterVariableName), True()),
 		If(Err().Op("!=").Nil()).Block(
