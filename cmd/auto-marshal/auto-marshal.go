@@ -14,9 +14,12 @@ import (
 )
 
 func generate(sourceFile string, p *packages.Package, obj *types.Object, namedType *types.TypeName) error {
-	println("Generating code for package: " + p.String())
-
 	symbolName := (*obj).Name()
+	targetFile := api.DeriveOutputFileName(sourceFile, obj)
+	println("Generating code for: " + p.String() + "." + symbolName)
+	println("    From: " + sourceFile)
+	println("    To:   " + targetFile)
+
 	underlying := namedType.Type().Underlying()
 	switch kind := underlying.(type) {
 	case *types.Interface:
@@ -26,31 +29,26 @@ func generate(sourceFile string, p *packages.Package, obj *types.Object, namedTy
 			println("  - ", impl.Name())
 		}
 
-		return interfaces.GenerateCode(sourceFile, obj, implementations, "json")
+		return interfaces.GenerateCode(targetFile, obj, implementations, "json")
 	case *types.Struct:
 		println(symbolName+" is a struct!", kind.NumFields())
-		return structs.GenerateCode(sourceFile, kind, obj)
+		return structs.GenerateCode(targetFile, kind, obj)
 	case *types.Pointer:
 		// TODO the elem can itself be a pointer again, it should be recursively dereferenced
 		// TODO pointers should probably be handled as part of the simple type default case, since they aren't less simple than e.g. slices
 		target := kind.Elem()
 		println(symbolName + " is a pointer!")
-		return simple.GenerateCode(sourceFile, &target, obj, true)
+		return simple.GenerateCode(targetFile, &target, obj, true)
 	default:
 		println(symbolName+" is a simple type!", kind.String())
-		return simple.GenerateCode(sourceFile, &underlying, obj, false)
+		return simple.GenerateCode(targetFile, &underlying, obj, false)
 	}
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s <symbol>\n", os.Args[0])
-		os.Exit(1)
-	}
 	pwd := util.ResolvedPwd()
 	moduleRoot := util.FindModuleRoot(pwd)
 	packagePath := util.DetectPackagePath(pwd, moduleRoot)
-	symbolName := os.Args[1]
 	config := packages.Config{Mode: packages.NeedTypes | packages.NeedDeps | packages.NeedImports}
 	packageList, err := packages.Load(&config, packagePath)
 	if err != nil {
@@ -64,31 +62,54 @@ func main() {
 
 	p := packageList[0]
 	if len(p.Errors) > 0 {
+		_, _ = fmt.Fprintf(os.Stderr, "Package processing errors:\n")
 		for i, e := range p.Errors {
-			_, _ = fmt.Fprintf(os.Stderr, "%d. Error: %s\n", i+1, e.Error())
+			_, _ = fmt.Fprintf(os.Stderr, "  %d. Error: %s\n", i+1, e.Error())
 		}
-		_, _ = fmt.Fprintf(os.Stderr, "Processing of package (%s) %s %s failed\n", packagePath, p.PkgPath, p.Name)
-		os.Exit(1)
 	}
 
 	scope := p.Types.Scope()
-	obj := scope.Lookup(symbolName)
-	if obj == nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Type %s not found!\n", symbolName)
+
+	var objects []types.Object
+
+	if len(os.Args) > 1 {
+		obj := scope.Lookup(os.Args[1])
+		if obj != nil {
+			objects = append(objects, obj)
+		}
+	} else {
+		names := scope.Names()
+		for i := range names {
+			name := names[i]
+			obj := scope.Lookup(name)
+			if obj != nil {
+				objects = append(objects, obj)
+			}
+		}
+	}
+	if len(objects) == 0 {
+		_, _ = fmt.Fprintf(os.Stderr, "No symbols found!\n")
 		os.Exit(1)
 	}
-	sourceFile := p.Fset.File(obj.Pos()).Name()
-	namedType, isNamedType := obj.(*types.TypeName)
 
-	if !isNamedType {
-		_, _ = fmt.Fprintf(os.Stderr, "Type '%s' not found in package '%s'!\n", symbolName, packagePath)
-		os.Exit(1)
-		return
-	}
+	for i := range objects {
+		obj := objects[i]
+		_, isFunction := obj.(*types.Func)
+		if isFunction {
+			continue
+		}
 
-	err = generate(sourceFile, p, &obj, namedType)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Code generation failed for type %s: %s\n", symbolName, err.Error())
-		os.Exit(1)
+		namedType, isNamedType := obj.(*types.TypeName)
+		if !isNamedType {
+			_, _ = fmt.Fprintf(os.Stderr, "    Type '%s' not found in package '%s'!\n", obj.Name(), packagePath)
+			continue
+		}
+
+		sourceFile := p.Fset.File(obj.Pos()).Name()
+		err = generate(sourceFile, p, &obj, namedType)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "    Code generation failed for type %s: %s\n", obj.Name(), err.Error())
+			continue
+		}
 	}
 }

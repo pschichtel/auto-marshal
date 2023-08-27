@@ -12,31 +12,12 @@ import (
 	"unicode/utf8"
 )
 
-func GenerateCode(sourceFile string, structType *types.Struct, structObject *types.Object) error {
-	hasInterface := false
-	for i := 0; i < structType.NumFields(); i++ {
-		field := structType.Field(i)
-		fieldType := field.Type()
-		fieldPointerType, fieldIsPointer := fieldType.(*types.Pointer)
-		if fieldIsPointer {
-			fieldType = fieldPointerType.Elem()
-		}
-		underlyingType := fieldType.Underlying()
-		_, hasInterface = underlyingType.(*types.Interface)
-		if hasInterface {
-			break
-		}
-	}
-
-	if !hasInterface {
-		return nil
-	}
-
+func GenerateCode(targetFile string, structType *types.Struct, structObject *types.Object) error {
 	file, err := generateFile(structType, structObject)
 	if err != nil {
 		return err
 	}
-	return file.Save(api.DeriveOutputFileName(sourceFile, structObject))
+	return file.Save(targetFile)
 }
 
 func generateFile(structType *types.Struct, structObject *types.Object) (*File, error) {
@@ -68,7 +49,7 @@ func generateFieldsEncoderFunction(file *File, structType *types.Struct, structO
 		tag := structType.Tag(i)
 		tags, err := structtag.Parse(tag)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		if !field.Exported() {

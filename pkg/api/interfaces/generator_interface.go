@@ -7,9 +7,9 @@ import (
 	"go/types"
 )
 
-func GenerateCode(sourceFile string, interfaceObject *types.Object, implementations []*types.TypeName, jsonTypeTagName string) error {
+func GenerateCode(targetFile string, interfaceObject *types.Object, implementations []*types.TypeName, jsonTypeTagName string) error {
 	file := generateFile(interfaceObject, implementations, jsonTypeTagName)
-	return file.Save(api.DeriveOutputFileName(sourceFile, interfaceObject))
+	return file.Save(targetFile)
 }
 
 func generateFile(interfaceObject *types.Object, implementations []*types.TypeName, jsonTypeTagName string) *File {

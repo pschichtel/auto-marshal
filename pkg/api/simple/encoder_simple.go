@@ -7,12 +7,12 @@ import (
 	"go/types"
 )
 
-func GenerateCode(sourceFile string, basicType *types.Type, object *types.Object, pointer bool) error {
+func GenerateCode(targetFile string, basicType *types.Type, object *types.Object, pointer bool) error {
 	file, err := generateFile(basicType, object, pointer)
 	if err != nil {
 		return err
 	}
-	return file.Save(api.DeriveOutputFileName(sourceFile, object))
+	return file.Save(targetFile)
 }
 
 func generateFile(theType *types.Type, object *types.Object, pointer bool) (*File, error) {
@@ -50,6 +50,8 @@ func generateFile(theType *types.Type, object *types.Object, pointer bool) (*Fil
 
 	return file, nil
 }
+
+// func DereferenValue()
 
 func GenerateBasicType(basicType *types.Basic, pointer bool) Code {
 	derefOp := "*"
