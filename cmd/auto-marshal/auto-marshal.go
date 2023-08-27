@@ -73,9 +73,11 @@ func main() {
 	var objects []types.Object
 
 	if len(os.Args) > 1 {
-		obj := scope.Lookup(os.Args[1])
-		if obj != nil {
-			objects = append(objects, obj)
+		for i := 1; i < len(os.Args); i++ {
+			obj := scope.Lookup(os.Args[i])
+			if obj != nil {
+				objects = append(objects, obj)
+			}
 		}
 	} else {
 		names := scope.Names()
